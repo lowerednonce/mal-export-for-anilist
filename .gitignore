@@ -1,0 +1,5 @@
+/target
+*.xml
+
+.vscode
+*.swp
