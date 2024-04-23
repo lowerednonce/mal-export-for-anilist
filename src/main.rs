@@ -18,7 +18,7 @@ struct Args {
 }
 
 const LIST_QUERY: &str = "
-query ($userName : String, type: MediaType) {
+query ($userName : String, $type: MediaType) {
   MediaListCollection (userName: $userName, type: $type) {
     user {
       id
