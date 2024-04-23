@@ -17,6 +17,53 @@ struct Args {
     file: PathBuf,
 }
 
+const COLLECTION_QUERY: &str ="
+query ($userName : String) {
+  MediaListCollection (userName: $userName, type:ANIME) {
+    user {
+      id
+    }
+    lists {
+      # name
+      entries {
+        id
+        status
+      	repeat
+      	progress
+      	customLists
+      	startedAt {
+	        year
+	        month
+	        day
+	      }
+	      completedAt {
+	        year
+	        month
+  	      day
+	      }
+      	createdAt
+      	updatedAt
+      	score
+      	notes
+      	media {
+	        idMal
+	        title {
+	          romaji
+	        }
+	        format
+	        episodes
+	      }
+	      priority
+      }
+      # isCustomList
+      # isSplitCompletedList
+      status
+    }
+    hasNextChunk
+  }
+}
+";
+
 const LIST_QUERY: &str = "
 query ($page : Int, $perPage : Int, $userName : String, $type: MediaType) {
   Page(page: $page, perPage: $perPage) {
@@ -79,6 +126,7 @@ query ($name : String) {
 enum QueryType {
     LIST,
     STATS,
+    COLLECTION,
 }
 
 async fn make_query(
@@ -88,6 +136,7 @@ async fn make_query(
     page: Option<i8>,
     qtype: QueryType,
 ) -> serde_json::Value {
+
     let list_query_json = json!({
         "query" : query,
         "variables" : {
@@ -103,6 +152,12 @@ async fn make_query(
             "name" : username
         }
     });
+    let collection_query_json = json!({
+        "query" : query,
+        "variables" : {
+            "userName" : username
+        }
+    });
 
     let resp = client
         .post("https://graphql.anilist.co/")
@@ -110,8 +165,10 @@ async fn make_query(
         .header("Accept", "application/json")
         .body(if qtype == QueryType::LIST {
             list_query_json.to_string()
-        } else {
+        } else if qtype == QueryType::STATS {
             stats_query_json.to_string()
+        } else {
+            collection_query_json.to_string()
         })
         .send()
         .await
@@ -158,32 +215,27 @@ async fn main() -> std::io::Result<()> {
     )?;
     writeln!(f, "\t</myinfo>")?;
 
-    let mut media_list: Vec<serde_json::Value> = Vec::new();
+    let mut media_list: Vec<xmlformat::AnimeEntry> = Vec::new();
     while {
         page_counter += 1;
-        let result = make_query(
-            LIST_QUERY,
-            &client,
-            &args.user,
-            Some(page_counter),
-            QueryType::LIST,
-        )
-        .await;
-        media_list.extend(
-            result["data"]["Page"]["mediaList"]
-                .as_array()
-                .expect("unexpected error occured while deserializing mediaList")
-                .to_owned(),
-        );
-        match result["data"]["Page"]["pageInfo"]["hasNextPage"].as_bool() {
+        let result = make_query(COLLECTION_QUERY, &client, &args.user, None, QueryType::COLLECTION).await;
+
+        let lists : Vec<xmlformat::AnimeList> = serde_json::from_value::<Vec<xmlformat::AnimeList>>(result["data"]["MediaListCollection"]["lists"].clone()).expect("unexpected error occured while parsing user lists");
+        for list in &lists {
+            match list.status {
+                None => (),
+                // only add entries from the status lists, entries from custom lists are going to
+                // be repeated in them either way.
+                Some(_) => media_list.extend(list.entries.clone())
+            };
+        };
+        match result["data"]["MediaListCollection"]["hasNextChunk"].as_bool() {
             Some(v) => v,
             None => false,
         }
     } {} // do-while
     for media_entry in media_list {
-        let media_entry_parsed: xmlformat::AnimeEntry = serde_json::from_value(media_entry)
-            .expect("unexpected error occured while deserializing anime list entry");
-        writeln!(f, "{}", xmlformat::xml_anime(media_entry_parsed))?;
+        writeln!(f, "{}", xmlformat::xml_anime(media_entry))?;
     }
     writeln!(f, "</myanimelist>")?;
 
