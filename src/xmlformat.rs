@@ -74,7 +74,6 @@ pub struct AnimeList {
     pub status: Option<Status>,
 }
 
-
 #[derive(Deserialize)]
 #[allow(non_snake_case)]
 pub struct UserStatistics {
