@@ -26,6 +26,6 @@ In its current state, the only export the anime list. Custom lists are transcode
 
 ## Errors
 
-The only error that should be able to occur is going over the AniList API rate-limit. That kicks in when you make too many requests. The package makes 1 query per 50 entries in your list. People with more than 4500 entries in their lists will likely face currently unresolved issues when exporting. 
+The only error that should be able to occur is going over the AniList API rate-limit. That kicks in when you make too many requests. However, the package will only make 2 queries (a *User* and a *MediaListCollection*) even for lists reaching into the thousands in terms of entries. 
 
 Any other case in which the program panics and exits incorrectly, a bug report should be filed so the issue can be fixed.

@@ -18,45 +18,51 @@ struct Args {
 }
 
 const LIST_QUERY: &str = "
-query ($page : Int, $perPage : Int, $userName : String, $type: MediaType) {
-  Page(page: $page, perPage: $perPage) {
-    pageInfo {
-      total
-      currentPage
-      lastPage
-      hasNextPage
-      perPage
+query ($userName : String, $type: MediaType) {
+  MediaListCollection (userName: $userName, type: $type) {
+    user {
+      id
     }
-    mediaList(userName: $userName, sort: SCORE_DESC, type: $type) {
+    lists {
+      # name
+      entries {
+        id
+        status
+      	repeat
+      	progress
+      	customLists
+      	startedAt {
+	        year
+	        month
+	        day
+	      }
+	      completedAt {
+	        year
+	        month
+  	      day
+	      }
+      	createdAt
+      	updatedAt
+      	score
+      	notes
+      	media {
+	        idMal
+	        title {
+	          romaji
+	        }
+	        format
+	        episodes
+	      }
+	      priority
+      }
+      # isCustomList
+      # isSplitCompletedList
       status
-      repeat
-      progress
-      customLists
-      startedAt {
-        year
-        month
-        day
-      }
-      completedAt {
-        year
-        month
-        day
-      }
-      createdAt
-      updatedAt
-      score
-      notes
-      media {
-        idMal
-        title {
-          romaji
-        }
-        format
-        episodes
-      }
     }
+    hasNextChunk
   }
-}";
+}
+";
 
 const STATS_QUERY: &str = "
 query ($name : String) {
@@ -85,22 +91,19 @@ async fn make_query(
     query: &str,
     client: &reqwest::Client,
     username: &String,
-    page: Option<i8>,
     qtype: QueryType,
 ) -> serde_json::Value {
-    let list_query_json = json!({
-        "query" : query,
-        "variables" : {
-            "page" : page,
-            "perPage" : 50, // maximum per page
-            "userName" : username,
-            "type" : "ANIME"
-        }
-    });
     let stats_query_json = json!({
         "query" : query,
         "variables" : {
             "name" : username
+        }
+    });
+    let list_query_json = json!({
+        "query" : query,
+        "variables" : {
+            "userName" : username,
+            "type" : "ANIME"
         }
     });
 
@@ -126,7 +129,6 @@ async fn main() -> std::io::Result<()> {
     let args = Args::parse();
     let client = Client::new();
 
-    let mut page_counter: i8 = 0;
     let path: &str = args.file.to_str().expect("couldn't decode file path");
     // create file / flush contents of an existing file
     #[allow(unused_assignments)]
@@ -137,7 +139,7 @@ async fn main() -> std::io::Result<()> {
         .open(path)?;
     f = OpenOptions::new().write(true).append(true).open(path)?;
 
-    let result = make_query(STATS_QUERY, &client, &args.user, None, QueryType::STATS).await;
+    let result = make_query(STATS_QUERY, &client, &args.user, QueryType::STATS).await;
     let user_statistics: xmlformat::UserStatistics =
         serde_json::from_value(result["data"]["User"]["statistics"]["anime"].to_owned())
             .expect("unexpected error occured while parsing in user statistics");
@@ -158,32 +160,30 @@ async fn main() -> std::io::Result<()> {
     )?;
     writeln!(f, "\t</myinfo>")?;
 
-    let mut media_list: Vec<serde_json::Value> = Vec::new();
+    let mut media_list: Vec<xmlformat::AnimeEntry> = Vec::new();
+    // TODO: figure out what hasNextChunk means
     while {
-        page_counter += 1;
-        let result = make_query(
-            LIST_QUERY,
-            &client,
-            &args.user,
-            Some(page_counter),
-            QueryType::LIST,
+        let result = make_query(LIST_QUERY, &client, &args.user, QueryType::LIST).await;
+
+        let lists: Vec<xmlformat::AnimeList> = serde_json::from_value::<Vec<xmlformat::AnimeList>>(
+            result["data"]["MediaListCollection"]["lists"].clone(),
         )
-        .await;
-        media_list.extend(
-            result["data"]["Page"]["mediaList"]
-                .as_array()
-                .expect("unexpected error occured while deserializing mediaList")
-                .to_owned(),
-        );
-        match result["data"]["Page"]["pageInfo"]["hasNextPage"].as_bool() {
+        .expect("unexpected error occured while parsing user lists");
+        for list in &lists {
+            match list.status {
+                None => (),
+                // only add entries from the status lists, entries from custom lists are going to
+                // be repeated in them either way.
+                Some(_) => media_list.extend(list.entries.clone()),
+            };
+        }
+        match result["data"]["MediaListCollection"]["hasNextChunk"].as_bool() {
             Some(v) => v,
             None => false,
         }
     } {} // do-while
     for media_entry in media_list {
-        let media_entry_parsed: xmlformat::AnimeEntry = serde_json::from_value(media_entry)
-            .expect("unexpected error occured while deserializing anime list entry");
-        writeln!(f, "{}", xmlformat::xml_anime(media_entry_parsed))?;
+        writeln!(f, "{}", xmlformat::xml_anime(media_entry))?;
     }
     writeln!(f, "</myanimelist>")?;
 

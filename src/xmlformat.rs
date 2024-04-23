@@ -2,7 +2,7 @@ use chrono::{Datelike, Local};
 use serde::Deserialize;
 
 #[derive(Deserialize, PartialEq, Copy, Clone)]
-enum Status {
+pub enum Status {
     CURRENT,
     PLANNING,
     COMPLETED,
@@ -10,7 +10,7 @@ enum Status {
     PAUSED,
     REPEATING,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[allow(non_camel_case_types)]
 enum Format {
     TV,
@@ -26,21 +26,21 @@ enum Format {
     UNKNOWN, // UNKNOWN reserved because of Rust
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct Date {
     year: Option<u16>,
     month: Option<u8>,
     day: Option<u8>,
 }
-#[derive(Deserialize)]
-struct Title {
+#[derive(Deserialize, Clone, PartialEq)]
+pub struct Title {
     romaji: String,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[allow(non_snake_case)]
-struct Media {
+pub struct Media {
     idMal: Option<u64>,
-    title: Title,
+    pub title: Title,
     format: Option<Format>,
     episodes: Option<u64>,
 }
@@ -50,7 +50,7 @@ struct StatusEntry {
     count: u32,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub struct AnimeEntry {
     status: Status,
@@ -61,7 +61,17 @@ pub struct AnimeEntry {
     completedAt: Date,
     score: f32,
     notes: Option<String>,
-    media: Media,
+    pub media: Media,
+}
+
+#[derive(Deserialize)]
+#[allow(non_snake_case)]
+pub struct AnimeList {
+    pub entries: Vec<AnimeEntry>,
+    // name: String,
+    // isCustomList: bool,
+    // isSplitCompletedList: bool,
+    pub status: Option<Status>,
 }
 
 #[derive(Deserialize)]
