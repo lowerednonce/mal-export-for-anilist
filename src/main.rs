@@ -15,6 +15,8 @@ struct Args {
     user: String,
     #[arg(short, long, value_name = "FILE")]
     file: PathBuf,
+    #[arg(short = 'n', long = "no-update", action= clap::ArgAction::SetFalse)]
+    update: bool,
 }
 
 const LIST_QUERY: &str = "
@@ -183,7 +185,7 @@ async fn main() -> std::io::Result<()> {
         }
     } {} // do-while
     for media_entry in media_list {
-        writeln!(f, "{}", xmlformat::xml_anime(media_entry))?;
+        writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?;
     }
     writeln!(f, "</myanimelist>")?;
 

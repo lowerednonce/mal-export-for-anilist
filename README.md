@@ -16,7 +16,9 @@ The package is a CLI tool, meaning it needs to be used from the command line. It
 mal-export-for-anilist --user <username> --file <output-file>
 ```
 
-If the supplied file already exists, it will be automatically overwritten. Re-exporting will only overwrite the old export and will not merge new information. The filename can also be a file path as long as it is compliant with the standards of your OS. 
+If the supplied file already exists, it will be automatically overwritten. Re-exporting will only overwrite the old export and will not merge new information. The filename can also be a file path as long as it is compliant with the standards of your OS.
+
+Another argument is `-n` or `--no-update`, which disables *update_on_import* being automatically set to 1. This is the recommended option for merging older lists into newer ones. 
 
 ## Generated document
 

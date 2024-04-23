@@ -272,7 +272,7 @@ pub fn xml_export_comment(username: &str) -> String {
     buffer
 }
 
-pub fn xml_anime(anime_entry: AnimeEntry) -> String {
+pub fn xml_anime(anime_entry: AnimeEntry, update: bool) -> String {
     let mut xmlout: String = String::new();
     match anime_entry.media.idMal {
         None => xmlout.push_str("<!--\n"),
@@ -362,7 +362,11 @@ pub fn xml_anime(anime_entry: AnimeEntry) -> String {
     }
     xmlout.push_str(&xml_tag(Some(2), "my_discuss", "1"));
     xmlout.push_str(&xml_tag(Some(2), "my_sns", "default"));
-    xmlout.push_str(&xml_tag(Some(2), "update_on_import", "1"));
+    if update {
+        xmlout.push_str(&xml_tag(Some(2), "update_on_import", "1"));
+    } else {
+        xmlout.push_str(&xml_tag(Some(2), "update_on_import", "0"));
+    }
     xmlout.push_str("\t</anime>");
     match anime_entry.media.idMal {
         None => xmlout.push_str("-->\n"),
