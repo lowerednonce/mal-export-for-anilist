@@ -20,7 +20,7 @@ The \<myinfo\> tag is used for storing general statistics and information about 
 
 - **user\_id**: the user's id on MAL
 - **user\_name**: the user's name on MAL
-- **user\_export\_type**: an integer left at 0, its purpose is unclear
+- **user\_export\_type**: 1 for an anime list, 2 for a manga list 
 - **user\_total\_anime**: the total number of anime on a user's list, includes all entries
 - **user\_total\_watching**: the number of anime the user is currently watching
 - **user\_total\_completed**: the number of anime the user has already completed
