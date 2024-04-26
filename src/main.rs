@@ -33,16 +33,17 @@ query ($userName : String, $type: MediaType) {
       	repeat
       	progress
       	customLists
+        hiddenFromStatusLists
       	startedAt {
-	        year
-	        month
-	        day
-	      }
-	      completedAt {
-	        year
-	        month
+	      year
+	      month
+	      day
+	    }
+	    completedAt {
+	      year
+	      month
   	      day
-	      }
+	    }
       	createdAt
       	updatedAt
       	score
@@ -54,12 +55,12 @@ query ($userName : String, $type: MediaType) {
 	        }
 	        format
 	        episodes
-	      }
-	      priority
+	    }
+	    priority
       }
-      # isCustomList
+      isCustomList
       # isSplitCompletedList
-      status
+      # status
     }
     hasNextChunk
   }
@@ -162,30 +163,29 @@ async fn main() -> std::io::Result<()> {
     )?;
     writeln!(f, "\t</myinfo>")?;
 
-    let mut media_list: Vec<xmlformat::AnimeEntry> = Vec::new();
-    // TODO: figure out what hasNextChunk means
-    while {
-        let result = make_query(LIST_QUERY, &client, &args.user, QueryType::LIST).await;
+    let mut status_media_list: Vec<xmlformat::AnimeEntry> = Vec::new();
+    let mut custom_media_list: Vec<xmlformat::AnimeEntry> = Vec::new();
+    let result = make_query(LIST_QUERY, &client, &args.user, QueryType::LIST).await;
 
-        let lists: Vec<xmlformat::AnimeList> = serde_json::from_value::<Vec<xmlformat::AnimeList>>(
-            result["data"]["MediaListCollection"]["lists"].clone(),
-        )
-        .expect("unexpected error occured while parsing user lists");
-        for list in &lists {
-            match list.status {
-                None => (),
-                // only add entries from the status lists, entries from custom lists are going to
-                // be repeated in them either way.
-                Some(_) => media_list.extend(list.entries.clone()),
-            };
+    let lists: Vec<xmlformat::AnimeList> = serde_json::from_value::<Vec<xmlformat::AnimeList>>(
+        result["data"]["MediaListCollection"]["lists"].clone(),
+    )
+    .expect("unexpected error occured while parsing user lists");
+
+    for list in &lists {
+        if list.isCustomList {
+            custom_media_list.extend(list.entries.clone())
+        } else {
+            status_media_list.extend(list.entries.clone())
         }
-        match result["data"]["MediaListCollection"]["hasNextChunk"].as_bool() {
-            Some(v) => v,
-            None => false,
-        }
-    } {} // do-while
-    for media_entry in media_list {
+    }
+    for media_entry in status_media_list {
         writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?;
+    }
+    for media_entry in custom_media_list {
+        if media_entry.hiddenFromStatusLists {
+            writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?;
+        }
     }
     writeln!(f, "</myanimelist>")?;
 

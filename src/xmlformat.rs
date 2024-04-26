@@ -57,6 +57,7 @@ pub struct AnimeEntry {
     repeat: u32, // just to be safe
     progress: u32,
     customLists: serde_json::Value,
+    pub hiddenFromStatusLists: bool,
     startedAt: Date,
     completedAt: Date,
     score: f32,
@@ -69,9 +70,9 @@ pub struct AnimeEntry {
 pub struct AnimeList {
     pub entries: Vec<AnimeEntry>,
     // name: String,
-    // isCustomList: bool,
+    pub isCustomList: bool,
     // isSplitCompletedList: bool,
-    pub status: Option<Status>,
+    // pub status: Option<Status>,
 }
 
 #[derive(Deserialize)]
