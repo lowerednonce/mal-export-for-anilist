@@ -123,7 +123,7 @@ async fn make_query(
     client: &reqwest::Client,
     username: &String,
     qtype: QueryType,
-    list_type: Option<&str>
+    list_type: Option<&str>,
 ) -> serde_json::Value {
     let stats_query_json = json!({
         "query" : query,
@@ -135,7 +135,7 @@ async fn make_query(
         "query" : query,
         "variables" : {
             "userName" : username,
-            "type" : list_type 
+            "type" : list_type
         }
     });
 
@@ -178,9 +178,16 @@ async fn main() -> std::io::Result<()> {
             result = make_query(ANISTATS_QUERY, &client, &args.user, QueryType::STATS, None).await;
             serde_json::from_value(result["data"]["User"]["statistics"]["anime"].to_owned())
                 .expect("unexpected error occured while parsing in user statistics")
-        },
+        }
         ListType::Manga => {
-            result = make_query(MANGASTATS_QUERY, &client, &args.user, QueryType::STATS, None).await;
+            result = make_query(
+                MANGASTATS_QUERY,
+                &client,
+                &args.user,
+                QueryType::STATS,
+                None,
+            )
+            .await;
             serde_json::from_value(result["data"]["User"]["statistics"]["manga"].to_owned())
                 .expect("unexpected error occured while parsing in user statistics")
         }
@@ -191,41 +198,52 @@ async fn main() -> std::io::Result<()> {
     writeln!(f, "<myanimelist>")?;
     writeln!(f, "{}", xmlformat::xml_export_comment(&args.user))?;
     writeln!(f, "\t<myinfo>")?;
-    writeln!(
-        f,
-        "{}",
-        {
-            match args.list_type {
-                ListType::Anime => {
-                    xmlformat::xml_animeheader(
-                        user_statistics,
-                        result["data"]["User"]["id"].as_u64().unwrap(),
-                        result["data"]["User"]["name"].as_str().unwrap().to_string()
-                    )
-                },
-                ListType::Manga => {
-                    xmlformat::xml_mangaheader(
-                        user_statistics,
-                        result["data"]["User"]["id"].as_u64().unwrap(),
-                        result["data"]["User"]["name"].as_str().unwrap().to_string()
-                    )
-                }
-            }
+    writeln!(f, "{}", {
+        match args.list_type {
+            ListType::Anime => xmlformat::xml_animeheader(
+                user_statistics,
+                result["data"]["User"]["id"].as_u64().unwrap(),
+                result["data"]["User"]["name"].as_str().unwrap().to_string(),
+            ),
+            ListType::Manga => xmlformat::xml_mangaheader(
+                user_statistics,
+                result["data"]["User"]["id"].as_u64().unwrap(),
+                result["data"]["User"]["name"].as_str().unwrap().to_string(),
+            ),
         }
-    )?;
+    })?;
     writeln!(f, "\t</myinfo>")?;
 
     let mut status_media_list: Vec<xmlformat::MediaEntry> = Vec::new();
     let mut custom_media_list: Vec<xmlformat::MediaEntry> = Vec::new();
     let result = match args.list_type {
-        ListType::Anime => make_query(LIST_QUERY, &client, &args.user, QueryType::LIST, Some("ANIME")).await,
-        ListType::Manga => make_query(LIST_QUERY, &client, &args.user, QueryType::LIST, Some("MANGA")).await,
+        ListType::Anime => {
+            make_query(
+                LIST_QUERY,
+                &client,
+                &args.user,
+                QueryType::LIST,
+                Some("ANIME"),
+            )
+            .await
+        }
+        ListType::Manga => {
+            make_query(
+                LIST_QUERY,
+                &client,
+                &args.user,
+                QueryType::LIST,
+                Some("MANGA"),
+            )
+            .await
+        }
     };
 
-    let lists: Vec<xmlformat::MediaListGroup> = serde_json::from_value::<Vec<xmlformat::MediaListGroup>>(
-        result["data"]["MediaListCollection"]["lists"].clone(),
-    )
-    .expect("unexpected error occured while parsing user lists");
+    let lists: Vec<xmlformat::MediaListGroup> =
+        serde_json::from_value::<Vec<xmlformat::MediaListGroup>>(
+            result["data"]["MediaListCollection"]["lists"].clone(),
+        )
+        .expect("unexpected error occured while parsing user lists");
 
     for list in &lists {
         if list.isCustomList {
@@ -239,7 +257,6 @@ async fn main() -> std::io::Result<()> {
             ListType::Anime => writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?,
             ListType::Manga => writeln!(f, "{}", xmlformat::xml_manga(media_entry, args.update))?,
         }
-        
     }
     for media_entry in custom_media_list {
         if media_entry.hiddenFromStatusLists {
