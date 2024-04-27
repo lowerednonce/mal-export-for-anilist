@@ -43,6 +43,8 @@ pub struct Media {
     pub title: Title,
     format: Option<Format>,
     episodes: Option<u64>,
+    chapters: Option<u64>,
+    volumes: Option<u64>,
 }
 #[derive(Deserialize, Copy, Clone)]
 struct StatusEntry {
@@ -52,10 +54,11 @@ struct StatusEntry {
 
 #[derive(Deserialize, Clone)]
 #[allow(non_snake_case)]
-pub struct AnimeEntry {
+pub struct MediaEntry {
     status: Status,
     repeat: u32, // just to be safe
     progress: u32,
+    progressVolumes: Option<u32>,
     customLists: serde_json::Value,
     pub hiddenFromStatusLists: bool,
     startedAt: Date,
@@ -67,8 +70,8 @@ pub struct AnimeEntry {
 
 #[derive(Deserialize)]
 #[allow(non_snake_case)]
-pub struct AnimeList {
-    pub entries: Vec<AnimeEntry>,
+pub struct MediaListGroup {
+    pub entries: Vec<MediaEntry>,
     // name: String,
     pub isCustomList: bool,
     // isSplitCompletedList: bool,
@@ -92,6 +95,14 @@ impl std::string::ToString for Status {
             Status::PAUSED => String::from("On-Hold"),
             Status::REPEATING => String::from("Completed"),
         }
+    }
+}
+
+fn to_string_manga(status: Status) -> String {
+    match status {
+        Status::CURRENT => String::from("Reading"),
+        Status::PLANNING => String::from("Plan to Read"),
+        _ => status.to_string(),
     }
 }
 
@@ -189,7 +200,7 @@ fn string_option_unwrap(string: Option<String>) -> String {
     }
 }
 
-pub fn xml_header(stats: UserStatistics, id: u64, name: String) -> String {
+pub fn xml_animeheader(stats: UserStatistics, id: u64, name: String) -> String {
     let default_status: StatusEntry = StatusEntry {
         status: Status::CURRENT, // ignored
         count: 0,
@@ -249,6 +260,69 @@ pub fn xml_header(stats: UserStatistics, id: u64, name: String) -> String {
     header
 }
 
+pub fn xml_mangaheader(stats: UserStatistics, id: u64, name: String) -> String {
+    let default_status: StatusEntry = StatusEntry {
+        status: Status::CURRENT, // ignored
+        count: 0,
+    };
+    let default_status_ref = &&default_status;
+
+    let closure = |entry: &Vec<StatusEntry>, status: Status| {
+        **entry
+            .into_iter()
+            .filter(|s| s.status == status)
+            .collect::<Vec<_>>()
+            .get(0)
+            .unwrap_or(default_status_ref)
+    };
+
+    // NOTE: AniList only seems to report Planning, Completed, Dropped, and Paused statuses. This
+    // is left here for compatibility
+    let status_reading: StatusEntry = closure(&stats.statuses, Status::CURRENT);
+    let status_rereading: StatusEntry = closure(&stats.statuses, Status::REPEATING);
+    let status_completed: StatusEntry = closure(&stats.statuses, Status::COMPLETED);
+    let status_onhold: StatusEntry = closure(&stats.statuses, Status::PAUSED);
+    let status_dropped: StatusEntry = closure(&stats.statuses, Status::DROPPED);
+    let status_plantowatch: StatusEntry = closure(&stats.statuses, Status::PLANNING);
+
+    let mut header: String = String::new();
+    header.push_str(&xml_tag(Some(2), "user_id", &id.to_string()));
+    header.push_str(&xml_tag(Some(2), "user_name", &name));
+    header.push_str(&xml_tag(Some(2), "user_export_type", "2"));
+    header.push_str(&xml_tag(
+        Some(2),
+        "user_total_manga",
+        &stats.count.to_string(),
+    ));
+    header.push_str(&xml_tag(
+        Some(2),
+        "user_total_reading",
+        &(status_reading.count + status_rereading.count).to_string(),
+    ));
+    header.push_str(&xml_tag(
+        Some(2),
+        "user_total_completed",
+        &status_completed.count.to_string(),
+    ));
+    header.push_str(&xml_tag(
+        Some(2),
+        "user_total_onhold",
+        &status_onhold.count.to_string(),
+    ));
+    header.push_str(&xml_tag(
+        Some(2),
+        "user_total_dropped",
+        &status_dropped.count.to_string(),
+    ));
+    header.push_str(&xml_tag(
+        Some(2),
+        "user_total_plantoread",
+        &status_plantowatch.count.to_string(),
+    ));
+
+    header
+}
+
 pub fn xml_export_comment(username: &str) -> String {
     let mut buffer = String::new();
     let now = Local::now();
@@ -273,7 +347,7 @@ pub fn xml_export_comment(username: &str) -> String {
     buffer
 }
 
-pub fn xml_anime(anime_entry: AnimeEntry, update: bool) -> String {
+pub fn xml_anime(anime_entry: MediaEntry, update: bool) -> String {
     let mut xmlout: String = String::new();
     match anime_entry.media.idMal {
         None => xmlout.push_str("<!--\n"),
@@ -370,7 +444,106 @@ pub fn xml_anime(anime_entry: AnimeEntry, update: bool) -> String {
     }
     xmlout.push_str("\t</anime>");
     match anime_entry.media.idMal {
-        None => xmlout.push_str("-->\n"),
+        None => xmlout.push_str("\n-->\n"),
+        Some(_) => {}
+    }
+
+    xmlout
+}
+
+pub fn xml_manga(manga_entry: MediaEntry, update: bool) -> String {
+    let mut xmlout: String = String::new();
+    match manga_entry.media.idMal {
+        None => xmlout.push_str("<!--\n"),
+        Some(_) => {}
+    }
+    xmlout.push_str("\t<manga>\n");
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "manga_mangadb_id",
+        &manga_entry.media.idMal.unwrap_or(0).to_string(),
+    ));
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "manga_title",
+        &manga_entry.media.title.romaji,
+    ));
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "manga_volumes",
+        &manga_entry.media.volumes.unwrap_or(0).to_string(),
+    ));
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "manga_chapters",
+        &manga_entry.media.chapters.unwrap_or(0).to_string(),
+    ));
+    xmlout.push_str(&xml_tag(Some(2), "my_id", "0")); // keep it zero
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "my_read_volumes",
+        &manga_entry.progressVolumes.unwrap_or(0).to_string(),
+    ));
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "my_read_chapters",
+        &manga_entry.progress.to_string(),
+    ));
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "my_start_date",
+        &manga_entry.startedAt.to_string(),
+    ));
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "my_finish_date",
+        &manga_entry.completedAt.to_string(),
+    ));
+    xmlout.push_str(&xml_tag(Some(2), "my_scanalation_group", ""));
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "my_score",
+        &manga_entry.score.to_string(),
+    ));
+    xmlout.push_str(&xml_tag(Some(2), "my_storage", ""));
+    xmlout.push_str(&xml_tag(Some(2), "my_retail_volumes", "0"));
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "my_status",
+        &to_string_manga(manga_entry.status),
+    ));
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "my_comments",
+        &string_option_unwrap(manga_entry.notes),
+    ));
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "my_times_read",
+        &(manga_entry.repeat).to_string(),
+    ));
+    xmlout.push_str(&xml_tag(
+        Some(2),
+        "my_tags",
+        &lists_to_tags(manga_entry.customLists),
+    ));
+    xmlout.push_str(&xml_tag(Some(2), "my_priority", ""));
+    xmlout.push_str(&xml_tag(Some(2), "my_reread_value", "")); // MAL only
+    if manga_entry.status == Status::REPEATING {
+        xmlout.push_str(&xml_tag(Some(2), "my_rereading", "YES"));
+    } else {
+        xmlout.push_str(&xml_tag(Some(2), "my_rereading", "NO"));
+    }
+    xmlout.push_str(&xml_tag(Some(2), "my_discuss", "YES"));
+    xmlout.push_str(&xml_tag(Some(2), "my_sns", "default"));
+    if update {
+        xmlout.push_str(&xml_tag(Some(2), "update_on_import", "1"));
+    } else {
+        xmlout.push_str(&xml_tag(Some(2), "update_on_import", "0"));
+    }
+    xmlout.push_str("\t</manga>");
+    match manga_entry.media.idMal {
+        None => xmlout.push_str("\n-->\n"),
         Some(_) => {}
     }
 

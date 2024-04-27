@@ -68,7 +68,7 @@ The \<myinfo\> tag is really similar to that of anime lists, with a few terms ch
 
 - **user\_id**: the user's id on MAL
 - **user\_name**: the user's name on MAL
-- **user\_export\_type**: left at 1 for anime list exports and 2 for manga lists
+- **user\_export\_type**: 1 for anime list exports and 2 for manga lists
 - **user\_total\_manga**: the total number of manga on a user's list, includes all entries
 - **user\_total\_reading**: the number of manga the user is currently reading (see limitations above)
 - **user\_total\_completed**: the number of manga the user has already completed
