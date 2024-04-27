@@ -102,10 +102,7 @@ fn to_string_manga(status: Status) -> String {
     match status {
         Status::CURRENT => String::from("Reading"),
         Status::PLANNING => String::from("Plan to Read"),
-        Status::COMPLETED => String::from("Completed"),
-        Status::DROPPED => String::from("Dropped"),
-        Status::PAUSED => String::from("On-Hold"),
-        Status::REPEATING => String::from("Completed"),
+        _ => status.to_string(),
     }
 }
 
