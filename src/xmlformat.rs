@@ -23,12 +23,12 @@ enum Format {
     MANGA,
     NOVEL,
     ONE_SHOT,
-    UNKNOWN, // UNKNOWN reserved because of Rust
+    UNKNOWN, // reserved because of Rust
 }
 
 #[derive(Deserialize, Clone)]
 struct Date {
-    year: Option<u16>,
+    year: Option<u32>,
     month: Option<u8>,
     day: Option<u8>,
 }
@@ -50,16 +50,16 @@ pub struct Media {
 #[derive(Deserialize, Copy, Clone)]
 struct StatusEntry {
     status: Status,
-    count: u32,
+    count: u64,
 }
 
 #[derive(Deserialize, Clone)]
 #[allow(non_snake_case)]
 pub struct MediaEntry {
     status: Status,
-    repeat: u32, // just to be safe
-    progress: u32,
-    progressVolumes: Option<u32>,
+    repeat: u64,
+    progress: u64,
+    progressVolumes: Option<u64>,
     customLists: serde_json::Value,
     pub hiddenFromStatusLists: bool,
     startedAt: Date,
@@ -73,10 +73,7 @@ pub struct MediaEntry {
 #[allow(non_snake_case)]
 pub struct MediaListGroup {
     pub entries: Vec<MediaEntry>,
-    // name: String,
     pub isCustomList: bool,
-    // isSplitCompletedList: bool,
-    // pub status: Option<Status>,
 }
 
 #[derive(Deserialize)]

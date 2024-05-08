@@ -35,64 +35,60 @@ struct Args {
 }
 
 const LIST_QUERY: &str = "
-query ($userName : String, $type: MediaType) {
-  MediaListCollection (userName: $userName, type: $type) {
+query ($userName: String, $type: MediaType) {
+  MediaListCollection(userName: $userName, type: $type) {
     user {
       id
     }
     lists {
-      # name
       entries {
         id
         status
-      	repeat
-      	progress
+        repeat
+        progress
         progressVolumes
-      	customLists
+        customLists
         hiddenFromStatusLists
-      	startedAt {
-	      year
-	      month
-	      day
-	    }
-	    completedAt {
-	      year
-	      month
-  	      day
-	    }
-      	createdAt
-      	updatedAt
-      	score
-      	notes
-      	media {
-            idMal
-            isAdult
-	        title {
-	          romaji
-	        }
-	        format
-	        episodes
-            chapters
-            volumes
-	    }
-	    priority
+        startedAt {
+          year
+          month
+          day
+        }
+        completedAt {
+          year
+          month
+          day
+        }
+        createdAt
+        updatedAt
+        score
+        notes
+        media {
+          idMal
+          isAdult
+          title {
+            romaji
+          }
+          format
+          episodes
+          chapters
+          volumes
+        }
+        priority
       }
       isCustomList
-      # isSplitCompletedList
-      # status
     }
-    hasNextChunk
   }
 }
 ";
 
 const ANISTATS_QUERY: &str = "
-query ($name : String) {
+query ($name: String) {
   User(name: $name) {
     id
     name
     statistics {
-        anime {
+      anime {
         count
         statuses {
           status
@@ -101,21 +97,22 @@ query ($name : String) {
       }
     }
   }
-}";
+}
+";
 
 const MANGASTATS_QUERY: &str = "
-query ($name : String) {
+query ($name: String) {
   User(name: $name) {
     id
     name
     statistics {
-        manga {
-            count
-            statuses {
-              status
-              count
-            }
+      manga {
+        count
+        statuses {
+          status
+          count
         }
+      }
     }
   }
 }";
