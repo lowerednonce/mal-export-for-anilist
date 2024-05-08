@@ -4,12 +4,12 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Client;
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE, ACCEPT, AUTHORIZATION};
 use serde_json::json;
 
-mod xmlformat;
 mod oauth;
+mod xmlformat;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum ListType {
@@ -129,7 +129,7 @@ async fn make_query(
     username: &String,
     qtype: QueryType,
     list_type: Option<&str>,
-    auth_pin: &String
+    auth_pin: &String,
 ) -> serde_json::Value {
     let stats_query_json = json!({
         "query" : query,
@@ -147,10 +147,11 @@ async fn make_query(
     let mut headers = HeaderMap::new();
     if auth_pin != "" {
         let headerv = HeaderValue::from_str(auth_pin);
-        println!("PIN: {}", auth_pin);
         match headerv {
             Ok(_) => {}
-            Err(a) => {println!("{}", a)}
+            Err(a) => {
+                println!("{}", a)
+            }
         }
         headers.insert(AUTHORIZATION, HeaderValue::from_str(auth_pin).unwrap());
     }
@@ -177,11 +178,13 @@ async fn make_query(
 async fn main() -> std::io::Result<()> {
     let args = Args::parse();
     let client = Client::new();
-    let mut auth_pin : String = String::new();
+    let mut auth_pin: String = String::new();
     if args.oauth {
         println!("OAuth was enabled, please visit and authenticate through the following link in your browser: {}", oauth::gen_url("18309"));
         let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("Failed to read input");
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read input");
         let input = input.trim();
         auth_pin.push_str("Bearer ");
         auth_pin.push_str(&input);
@@ -201,7 +204,15 @@ async fn main() -> std::io::Result<()> {
     let mut result: serde_json::Value = json!(null);
     let user_statistics: xmlformat::UserStatistics = match args.list_type {
         ListType::Anime => {
-            result = make_query(ANISTATS_QUERY, &client, &args.user, QueryType::STATS, None, &auth_pin).await;
+            result = make_query(
+                ANISTATS_QUERY,
+                &client,
+                &args.user,
+                QueryType::STATS,
+                None,
+                &auth_pin,
+            )
+            .await;
             serde_json::from_value(result["data"]["User"]["statistics"]["anime"].to_owned())
                 .expect("unexpected error occured while parsing in user statistics")
         }
