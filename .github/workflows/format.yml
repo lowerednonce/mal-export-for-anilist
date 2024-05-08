@@ -1,6 +1,14 @@
 name: Rustfmt formatting check
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+      - testing
+    paths-ignore:
+      - "**.md"
+  pull_request:
+  
 
 jobs:
   formatting:
