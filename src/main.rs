@@ -1,7 +1,7 @@
 use std::fs::OpenOptions;
-use std::{io, panic};
 use std::io::Write;
 use std::path::PathBuf;
+use std::{io, panic};
 
 use clap::{Parser, ValueEnum};
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
@@ -31,7 +31,7 @@ struct Args {
     #[arg(short, long, help = "Use OAuth to export hidden entries")]
     oauth: bool,
     #[arg(long = "no-nsfw", action = clap::ArgAction::SetFalse)]
-    nsfw: bool
+    nsfw: bool,
 }
 
 const LIST_QUERY: &str = "
@@ -242,7 +242,8 @@ async fn main() -> std::io::Result<()> {
             panic!("OAuth token usage failed")
         }
     };
-    let user_statistics = pre_user_statistics.expect("an error has occured while parsing UserStatistics from API");
+    let user_statistics =
+        pre_user_statistics.expect("an error has occured while parsing UserStatistics from API");
 
     // header
     writeln!(f, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")?;
@@ -309,16 +310,26 @@ async fn main() -> std::io::Result<()> {
     for media_entry in status_media_list {
         if !(args.nsfw == false && media_entry.media.isAdult == true) {
             match args.list_type {
-                ListType::Anime => writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?,
-                ListType::Manga => writeln!(f, "{}", xmlformat::xml_manga(media_entry, args.update))?,
+                ListType::Anime => {
+                    writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?
+                }
+                ListType::Manga => {
+                    writeln!(f, "{}", xmlformat::xml_manga(media_entry, args.update))?
+                }
             }
         }
     }
     for media_entry in custom_media_list {
-        if media_entry.hiddenFromStatusLists && !(args.nsfw == false && media_entry.media.isAdult == true) {
+        if media_entry.hiddenFromStatusLists
+            && !(args.nsfw == false && media_entry.media.isAdult == true)
+        {
             match args.list_type {
-                ListType::Anime => writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?,
-                ListType::Manga => writeln!(f, "{}", xmlformat::xml_manga(media_entry, args.update))?,
+                ListType::Anime => {
+                    writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?
+                }
+                ListType::Manga => {
+                    writeln!(f, "{}", xmlformat::xml_manga(media_entry, args.update))?
+                }
             }
         }
     }
