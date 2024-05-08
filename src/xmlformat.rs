@@ -40,6 +40,7 @@ pub struct Title {
 #[allow(non_snake_case)]
 pub struct Media {
     idMal: Option<u64>,
+    pub isAdult: bool,
     pub title: Title,
     format: Option<Format>,
     episodes: Option<u64>,

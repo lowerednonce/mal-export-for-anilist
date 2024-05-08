@@ -1,5 +1,5 @@
 use std::fs::OpenOptions;
-use std::io;
+use std::{io, panic};
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -20,16 +20,18 @@ enum ListType {
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long)]
+    #[arg(short, long, help = "Username on AniList")]
     user: String,
     #[arg(short = 'l', long = "list")]
     list_type: ListType,
     #[arg(short, long, value_name = "FILE")]
     file: PathBuf,
-    #[arg(short = 'n', long = "no-update", action = clap::ArgAction::SetFalse)]
+    #[arg(long = "no-update", action = clap::ArgAction::SetFalse)]
     update: bool,
-    #[arg(short, long)]
+    #[arg(short, long, help = "Use OAuth to export hidden entries")]
     oauth: bool,
+    #[arg(long = "no-nsfw", action = clap::ArgAction::SetFalse)]
+    nsfw: bool
 }
 
 const LIST_QUERY: &str = "
@@ -64,6 +66,7 @@ query ($userName : String, $type: MediaType) {
       	notes
       	media {
 	        idMal
+            isAdult
 	        title {
 	          romaji
 	        }
@@ -176,6 +179,11 @@ async fn make_query(
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    panic::set_hook(Box::new(|p| {
+        eprintln!("Panic: {}", p);
+        std::process::exit(1);
+    }));
+
     let args = Args::parse();
     let client = Client::new();
     let mut auth_pin: String = String::new();
@@ -202,7 +210,7 @@ async fn main() -> std::io::Result<()> {
 
     #[allow(unused_assignments)]
     let mut result: serde_json::Value = json!(null);
-    let user_statistics: xmlformat::UserStatistics = match args.list_type {
+    let pre_user_statistics: Result<xmlformat::UserStatistics, _> = match args.list_type {
         ListType::Anime => {
             result = make_query(
                 ANISTATS_QUERY,
@@ -214,7 +222,6 @@ async fn main() -> std::io::Result<()> {
             )
             .await;
             serde_json::from_value(result["data"]["User"]["statistics"]["anime"].to_owned())
-                .expect("unexpected error occured while parsing in user statistics")
         }
         ListType::Manga => {
             result = make_query(
@@ -227,9 +234,15 @@ async fn main() -> std::io::Result<()> {
             )
             .await;
             serde_json::from_value(result["data"]["User"]["statistics"]["manga"].to_owned())
-                .expect("unexpected error occured while parsing in user statistics")
         }
     };
+    match pre_user_statistics {
+        Ok(_) => {}
+        Err(_) => {
+            panic!("OAuth token usage failed")
+        }
+    };
+    let user_statistics = pre_user_statistics.expect("an error has occured while parsing UserStatistics from API");
 
     // header
     writeln!(f, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")?;
@@ -292,15 +305,27 @@ async fn main() -> std::io::Result<()> {
             status_media_list.extend(list.entries.clone())
         }
     }
+    // Truth table:
+    // nsfw | isAdult | result
+    // 1    | 0       | 1
+    // 1    | 0       | 1
+    // 0    | 1       | 0
+    // 0    | 0       | 1
+
     for media_entry in status_media_list {
-        match args.list_type {
-            ListType::Anime => writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?,
-            ListType::Manga => writeln!(f, "{}", xmlformat::xml_manga(media_entry, args.update))?,
+        if !(args.nsfw == false && media_entry.media.isAdult == true) {
+            match args.list_type {
+                ListType::Anime => writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?,
+                ListType::Manga => writeln!(f, "{}", xmlformat::xml_manga(media_entry, args.update))?,
+            }
         }
     }
     for media_entry in custom_media_list {
-        if media_entry.hiddenFromStatusLists {
-            writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?;
+        if media_entry.hiddenFromStatusLists && !(args.nsfw == false && media_entry.media.isAdult == true) {
+            match args.list_type {
+                ListType::Anime => writeln!(f, "{}", xmlformat::xml_anime(media_entry, args.update))?,
+                ListType::Manga => writeln!(f, "{}", xmlformat::xml_manga(media_entry, args.update))?,
+            }
         }
     }
     writeln!(f, "</myanimelist>")?;
