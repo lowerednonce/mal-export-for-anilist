@@ -65,7 +65,7 @@ query ($userName : String, $type: MediaType) {
       	score
       	notes
       	media {
-	        idMal
+            idMal
             isAdult
 	        title {
 	          romaji
@@ -305,12 +305,6 @@ async fn main() -> std::io::Result<()> {
             status_media_list.extend(list.entries.clone())
         }
     }
-    // Truth table:
-    // nsfw | isAdult | result
-    // 1    | 0       | 1
-    // 1    | 0       | 1
-    // 0    | 1       | 0
-    // 0    | 0       | 1
 
     for media_entry in status_media_list {
         if !(args.nsfw == false && media_entry.media.isAdult == true) {
