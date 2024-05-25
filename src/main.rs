@@ -24,7 +24,7 @@ struct Args {
     user: String,
     #[arg(short = 'l', long = "list")]
     list_type: ListType,
-    #[arg(short, long, value_name = "FILE", help="Example: anime-list.xml")]
+    #[arg(short, long, value_name = "FILE", help = "Example: anime-list.xml")]
     file: PathBuf,
     #[arg(long = "no-update", action = clap::ArgAction::SetFalse)]
     update: bool,
