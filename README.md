@@ -43,6 +43,20 @@ After the program finishes running and exits correctly without any errors, there
 
 Custom lists are transcoded as tags. For more information on the output see [mal-standard.md](mal-standard.md).
 
+## Building
+
+A standard cargo configuration is used in this package, clone the repository and run
+
+```sh
+cargo build --release
+```
+
+After cargo is done compiling the package, the executable can be found in the `target/release/` folder under the same name as the repository. Alternatively, you can also use the shortcut
+
+```sh
+cargo run --release -- [args]
+```
+
 ## Errors
 
 The only expected error has to do with OAuth. In case you input the authorization token badly, AniList can't accept it, hence causing a failure in making the queries.

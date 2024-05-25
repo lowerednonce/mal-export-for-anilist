@@ -126,17 +126,17 @@ impl std::string::ToString for Date {
     fn to_string(&self) -> String {
         let mut buffer: String = String::new();
         match self.year {
-            Some(i) => buffer.push_str(&i.to_string()),
+            Some(i) => buffer.push_str(&format!("{:04}", i)),
             None => buffer.push_str("0000"),
         };
         buffer.push_str("-");
         match self.month {
-            Some(i) => buffer.push_str(&i.to_string()),
+            Some(i) => buffer.push_str(&format!("{:02}", i)),
             None => buffer.push_str("00"),
         };
         buffer.push_str("-");
         match self.day {
-            Some(i) => buffer.push_str(&i.to_string()),
+            Some(i) => buffer.push_str(&format!("{:02}", i)),
             None => buffer.push_str("00"),
         };
 
