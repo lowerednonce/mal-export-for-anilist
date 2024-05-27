@@ -1,13 +1,13 @@
 [![CC BY-SA 4.0][cc-by-sa-shield]][cc-by-sa]
 [![Latest Release][release-shield]][build]
 [![Build Status][build-shield]][build]
-![Formatting Status][format-shield]
+![Rustfmt Status][rustfmt-shield]
 
 [cc-by-sa]: http://creativecommons.org/licenses/by-sa/4.0/
 [cc-by-sa-shield]: https://img.shields.io/badge/License-CC%20BY--SA%204.0-lightgrey.svg
 [build-shield]: https://img.shields.io/github/actions/workflow/status/lowerednonce/mal-export-for-anilist/.github%2Fworkflows%2Frelease.yml?label=release%20build
 [build]: https://github.com/lowerednonce/mal-export-for-anilist/releases/latest
-[format-shield]: https://img.shields.io/github/actions/workflow/status/lowerednonce/mal-export-for-anilist/.github%2Fworkflows%2Fformat.yml?label=formatting
+[rustfmt-shield]: https://img.shields.io/github/actions/workflow/status/lowerednonce/mal-export-for-anilist/.github%2Fworkflows%2Fformat.yml?label=rustfmt
 [release-shield]: https://img.shields.io/github/v/release/lowerednonce/mal-export-for-anilist
 
 # MAL exporter for AniList accounts
